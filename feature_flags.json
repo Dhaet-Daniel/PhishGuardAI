@@ -1,5 +1,5 @@
 {
   "ENABLE_SPACY": true,
-  "ENABLE_TRANSFORMERS": false,
-  "ENABLE_WHOIS": false
+  "ENABLE_TRANSFORMERS": true,
+  "ENABLE_WHOIS": true
 }
