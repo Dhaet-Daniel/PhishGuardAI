@@ -1,0 +1,201 @@
+import logging
+import os
+from datetime import UTC, datetime
+from pathlib import Path
+from time import perf_counter
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import (
+    get_redoc_html,
+    get_swagger_ui_html,
+    get_swagger_ui_oauth2_redirect_html,
+)
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+
+try:
+    from backend.core.limiter import limiter
+    from backend.models import init_db
+    from backend.routes.admin import router as admin_router
+    from backend.routes.auth import router as auth_router
+    from backend.routes.predict import router as predict_router
+    from backend.routes.settings import router as settings_router
+    from backend.routes.signup import router as signup_router
+except ModuleNotFoundError:
+    from core.limiter import limiter
+    from models import init_db
+    from routes.admin import router as admin_router
+    from routes.auth import router as auth_router
+    from routes.predict import router as predict_router
+    from routes.settings import router as settings_router
+    from routes.signup import router as signup_router
+
+APP_DIR = Path(__file__).resolve().parent
+STATIC_DIR = APP_DIR / "static"
+
+logger = logging.getLogger("phishguard.api")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
+
+init_db()
+
+app = FastAPI(
+    title="PhishGuardAI API",
+    version="1.1.0",
+    description=(
+        "Explainable email phishing analysis with request examples, weighted signal "
+        "breakdowns, and reviewer feedback capture."
+    ),
+    contact={"name": "PhishGuardAI Support", "email": "support@phishguardai.com"},
+    docs_url=None,
+    redoc_url=None,
+    openapi_tags=[
+        {
+            "name": "phishing-detection",
+            "description": "Endpoints for analyzing single emails, batch payloads, and reviewer feedback.",
+        },
+        {
+            "name": "system",
+            "description": "Operational endpoints for API discovery and health checks.",
+        },
+        {
+            "name": "auth",
+            "description": "Authentication endpoints for JWT login.",
+        },
+        {
+            "name": "admin",
+            "description": "Protected administrative endpoints for managing users, results, feedback, and stats.",
+        },
+    ],
+)
+
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+
+def _load_cors_origins() -> list[str]:
+    raw = os.getenv("PHISHGUARD_CORS_ORIGINS", "").strip()
+    if not raw:
+        return DEFAULT_CORS_ORIGINS
+    origins = [
+        origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()
+    ]
+    return origins or DEFAULT_CORS_ORIGINS
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_load_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.middleware("http")
+async def request_timing_middleware(request: Request, call_next):
+    start = perf_counter()
+    response = await call_next(request)
+    duration = perf_counter() - start
+    response.headers["X-Process-Time"] = f"{duration:.4f}"
+    logger.info(
+        "%s %s -> %s (%.4fs)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration,
+    )
+    return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected server error occurred."},
+    )
+
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    swagger = get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} Docs",
+        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+        swagger_favicon_url="/static/logo.svg",
+        swagger_ui_parameters={
+            "docExpansion": "list",
+            "defaultModelsExpandDepth": -1,
+            "displayRequestDuration": True,
+            "filter": True,
+            "persistAuthorization": True,
+            "tryItOutEnabled": True,
+        },
+    )
+    html = swagger.body.decode("utf-8")
+    html = html.replace(
+        "</head>",
+        '  <link rel="stylesheet" type="text/css" href="/static/swagger-custom.css">\n</head>',
+    )
+    return HTMLResponse(html)
+
+
+@app.get(app.swagger_ui_oauth2_redirect_url, include_in_schema=False)
+async def swagger_ui_redirect():
+    return get_swagger_ui_oauth2_redirect_html()
+
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html():
+    return get_redoc_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} ReDoc",
+        redoc_favicon_url="/static/logo.svg",
+    )
+
+
+@app.get("/", tags=["system"], summary="API overview")
+def api_root():
+    return {
+        "message": "PhishGuardAI API is running.",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "health": "/health",
+        "predict": "/api/v1/predict",
+    }
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(STATIC_DIR / "logo.svg", media_type="image/svg+xml")
+
+
+@app.get("/health", tags=["system"], summary="Service health check")
+def health_check():
+    return {
+        "status": "ok",
+        "service": "PhishGuardAI API",
+        "version": app.version,
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+
+
+app.include_router(predict_router, prefix="/api/v1")
+app.include_router(auth_router)
+app.include_router(signup_router)
+app.include_router(settings_router)
+app.include_router(admin_router)

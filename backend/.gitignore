@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets & local config
+.env
+.secret_key
+
+# Runtime database (local data — do not commit)
+*.db
+*.db-wal
+*.db-shm
+
+# Test/tooling caches
+.pytest_cache/
+.pytest_tmp/
+pytest-cache-files-*
+tests/.artifacts/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

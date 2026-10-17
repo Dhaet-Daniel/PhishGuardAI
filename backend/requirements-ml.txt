@@ -1,0 +1,8 @@
+# Optional ML extras for the detector (heavy: pulls torch + model downloads).
+# Install on top of the core requirements:  pip install -r requirements-ml.txt
+-r requirements.txt
+
+transformers>=4.57.0,<6.0.0
+torch>=2.9.0,<3.0.0
+spacy>=3.8.11,<4.0.0
+nltk==3.8.1
