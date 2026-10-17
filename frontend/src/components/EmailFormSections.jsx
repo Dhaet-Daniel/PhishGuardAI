@@ -21,15 +21,23 @@ export function EmailModeSelector({ value, onChange, namePrefix = 'email-mode' }
               key={option.value}
               type="button"
               onClick={() => onChange(option.value)}
-              className={`rounded-xl border px-4 py-3 text-left transition ${
+              className={`rounded-xl border px-4 py-3 min-h-11 text-left transition active:scale-[0.99] ${
                 active
-                  ? 'border-blue-500 bg-blue-500/10 text-white'
-                  : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'
+                  ? 'border-blue-500 bg-blue-500/10 text-white shadow-md shadow-blue-500/10'
+                  : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500 hover:bg-slate-800/70'
               }`}
               aria-pressed={active}
               aria-label={`${namePrefix}-${option.value}`}
             >
-              <p className="text-sm font-semibold">{option.label}</p>
+              <span className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold">{option.label}</p>
+                <i
+                  className={`fas fa-check-circle mt-0.5 ${
+                    active ? 'text-blue-400' : 'text-slate-700'
+                  }`}
+                  aria-hidden="true"
+                ></i>
+              </span>
               <p className="mt-1 text-xs text-slate-400">{option.description}</p>
             </button>
           );
@@ -99,7 +107,7 @@ export function HeadersEditor({
           <button
             type="button"
             onClick={onAdd}
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600"
+            className="rounded-lg bg-slate-700 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-slate-600 active:scale-[0.98]"
           >
             Add Header
           </button>
@@ -112,7 +120,7 @@ export function HeadersEditor({
             <button
               type="button"
               onClick={onAdd}
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600"
+              className="rounded-lg bg-slate-700 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-slate-600 active:scale-[0.98]"
             >
               Add Header
             </button>
@@ -148,7 +156,7 @@ export function HeadersEditor({
                 type="button"
                 onClick={() => onRemove(index)}
                 disabled={headers.length === 1}
-                className="w-full rounded-lg bg-red-600/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-lg bg-red-600/80 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-red-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Remove
               </button>
@@ -180,7 +188,7 @@ export function LinksEditor({
           <button
             type="button"
             onClick={onAdd}
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600"
+            className="rounded-lg bg-slate-700 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-slate-600 active:scale-[0.98]"
           >
             Add Link
           </button>
@@ -193,7 +201,7 @@ export function LinksEditor({
             <button
               type="button"
               onClick={onAdd}
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600"
+              className="rounded-lg bg-slate-700 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-slate-600 active:scale-[0.98]"
             >
               Add Link
             </button>
@@ -243,7 +251,7 @@ export function LinksEditor({
                 type="button"
                 onClick={() => onRemove(index)}
                 disabled={links.length === 1}
-                className="w-full rounded-lg bg-red-600/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-lg bg-red-600/80 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-red-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Remove
               </button>
@@ -275,7 +283,7 @@ export function AttachmentsEditor({
           <button
             type="button"
             onClick={onAdd}
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600"
+            className="rounded-lg bg-slate-700 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-slate-600 active:scale-[0.98]"
           >
             Add Attachment
           </button>
@@ -288,7 +296,7 @@ export function AttachmentsEditor({
             <button
               type="button"
               onClick={onAdd}
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600"
+              className="rounded-lg bg-slate-700 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-slate-600 active:scale-[0.98]"
             >
               Add Attachment
             </button>
@@ -337,7 +345,7 @@ export function AttachmentsEditor({
                   type="button"
                   onClick={() => onRemove(index)}
                   disabled={attachments.length === 1}
-                  className="w-full rounded-lg bg-red-600/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="w-full rounded-lg bg-red-600/80 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-red-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Remove
                 </button>

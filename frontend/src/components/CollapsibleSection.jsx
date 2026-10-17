@@ -13,12 +13,14 @@ export default function CollapsibleSection({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-slate-800 hover:bg-slate-750 text-left transition"
+        aria-expanded={open}
+        className="group w-full flex items-center justify-between gap-3 px-4 py-3 min-h-11 bg-slate-800 hover:bg-slate-700 text-left transition active:scale-[0.99]"
       >
         <span className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-300">
-            {open ? '−' : '+'} {title}
+          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-700 text-sm font-bold text-slate-200 transition group-hover:bg-blue-500/20 group-hover:text-blue-300">
+            {open ? '−' : '+'}
           </span>
+          <span className="text-sm font-medium text-slate-300">{title}</span>
           <span className="text-xs text-slate-500">(optional)</span>
         </span>
         {tooltip && (

@@ -200,7 +200,7 @@ export default function Pricing() {
                 {/* CTA Button */}
                 <button
                   onClick={() => handleCTA(plan.name)}
-                  className={`w-full py-2.5 rounded-lg mb-6 font-bold text-sm uppercase tracking-wider transition-all duration-300 ${
+                  className={`w-full py-3 min-h-11 rounded-lg mb-6 font-bold text-sm uppercase tracking-wider transition-all duration-300 active:scale-[0.98] ${
                     plan.featured
                       ? 'bg-green-600 text-white hover:bg-green-700 hover:shadow-[0_0_20px_rgba(0,168,107,0.8)]'
                       : 'bg-transparent border border-green-600 text-green-400 hover:bg-green-600/10 hover:shadow-[0_0_15px_rgba(0,168,107,0.5)]'

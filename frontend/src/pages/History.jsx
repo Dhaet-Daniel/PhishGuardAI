@@ -109,7 +109,11 @@ export default function History() {
         <div className="bg-[#111827] rounded-xl border border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold">Selected Record Detail</h3>
-            <button onClick={closeDetail} className="text-gray-400 hover:text-white">
+            <button
+              onClick={closeDetail}
+              aria-label="Close detail"
+              className="rounded-lg p-2.5 text-gray-400 transition hover:bg-slate-700 hover:text-white active:scale-95"
+            >
               <i className="fas fa-times"></i>
             </button>
           </div>
@@ -121,7 +125,12 @@ export default function History() {
           {detailError && (
             <div className="text-red-400 bg-red-900/20 p-3 rounded-lg">
               Error: {detailError}
-              <button onClick={() => handleViewDetail(selectedId)} className="ml-2 text-red-300 underline">Retry</button>
+              <button
+                onClick={() => handleViewDetail(selectedId)}
+                className="ml-2 rounded px-1.5 py-1 text-sm font-medium text-red-300 underline transition hover:bg-red-900/40 hover:text-red-200"
+              >
+                Retry
+              </button>
             </div>
           )}
           {detailData && <ResultPanel result={detailData} />}

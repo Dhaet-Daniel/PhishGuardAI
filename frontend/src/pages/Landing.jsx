@@ -563,8 +563,9 @@ export default function Landing() {
             <div className="md:hidden">
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="text-gray-300 hover:text-white focus:outline-none"
+                className="rounded-lg p-2.5 text-gray-300 transition hover:bg-gray-800 hover:text-white active:scale-95"
                 aria-label="Menu"
+                aria-expanded={mobileOpen}
               >
                 <i className="fas fa-bars text-2xl"></i>
               </button>
@@ -576,33 +577,33 @@ export default function Landing() {
             <div className="mobile-menu-panel flex flex-col space-y-2 pb-4 pt-3 text-sm font-medium">
               <button
                 onClick={() => { scrollToSection('features'); setMobileOpen(false); }}
-                className="nav-link hover:text-blue-400 transition py-2 px-3 rounded-xl"
+                className="nav-link hover:text-blue-400 transition px-3 py-3 min-h-11 rounded-xl"
               >
                 Features
               </button>
               <button
                 onClick={() => { scrollToSection('how-it-works'); setMobileOpen(false); }}
-                className="nav-link hover:text-blue-400 transition py-2 px-3 rounded-xl"
+                className="nav-link hover:text-blue-400 transition px-3 py-3 min-h-11 rounded-xl"
               >
                 How It Works
               </button>
               <Link
                 to="/pricing"
-                className="nav-link hover:text-blue-400 transition py-2 px-3 rounded-xl"
+                className="nav-link hover:text-blue-400 transition px-3 py-3 min-h-11 rounded-xl"
                 onClick={() => setMobileOpen(false)}
               >
                 Pricing
               </Link>
               <a
                 href="#"
-                className="nav-link hover:text-blue-400 transition py-2 px-3 rounded-xl"
+                className="nav-link hover:text-blue-400 transition px-3 py-3 min-h-11 rounded-xl"
                 onClick={(e) => { e.preventDefault(); toast('Resources hub coming soon.', { icon: 'ℹ️' }); setMobileOpen(false); }}
               >
                 Resources
               </a>
               <button
                 onClick={() => { openAuth('login'); setMobileOpen(false); }}
-                className="nav-link hover:text-blue-400 transition py-2 px-3 rounded-xl"
+                className="nav-link hover:text-blue-400 transition px-3 py-3 min-h-11 rounded-xl"
               >
                 Log In
               </button>
@@ -972,15 +973,15 @@ export default function Landing() {
       {demoOpen && (
         <div className="modal-overlay active fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={closeDemo}>
           <div className="bg-[#111827] p-6 rounded-2xl w-full max-w-md border border-gray-700 transform transition-all" onClick={e => e.stopPropagation()}>
-            <button onClick={closeDemo} className="absolute right-4 top-4 text-gray-400 hover:text-gray-200"><i className="fas fa-times"></i></button>
+            <button onClick={closeDemo} aria-label="Close demo form" className="absolute right-3 top-3 rounded-lg p-2 text-gray-400 transition hover:bg-gray-700 hover:text-white active:scale-95"><i className="fas fa-times"></i></button>
             <h3 className="text-2xl font-bold">Request a Demo</h3>
             <form onSubmit={handleDemoSubmit} className="mt-4 space-y-4">
               <input type="text" name="Full Name" placeholder="Full Name" required className="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 text-white focus:ring-2 focus:ring-blue-500" />
               <input type="email" name="Email Address" placeholder="Email Address" required className="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 text-white focus:ring-2 focus:ring-blue-500" />
               <input type="text" name="Organization" placeholder="Organization" required className="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 text-white focus:ring-2 focus:ring-blue-500" />
               <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={closeDemo} className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition">Cancel</button>
-                <button type="submit" className="submit-btn px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition">Submit</button>
+                <button type="button" onClick={closeDemo} className="px-5 py-3 min-h-11 bg-gray-700 rounded-lg font-medium hover:bg-gray-600 transition active:scale-[0.98]">Cancel</button>
+                <button type="submit" className="submit-btn px-5 py-3 min-h-11 bg-blue-600 rounded-lg font-semibold text-white shadow-md hover:bg-blue-700 transition active:scale-[0.98]">Submit</button>
               </div>
             </form>
           </div>
@@ -989,15 +990,15 @@ export default function Landing() {
       {trialOpen && (
         <div className="modal-overlay active fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={closeTrial}>
           <div className="bg-[#111827] p-6 rounded-2xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
-            <button onClick={closeTrial} className="absolute right-4 top-4 text-gray-400 hover:text-gray-200"><i className="fas fa-times"></i></button>
+            <button onClick={closeTrial} aria-label="Close trial form" className="absolute right-3 top-3 rounded-lg p-2 text-gray-400 transition hover:bg-gray-700 hover:text-white active:scale-95"><i className="fas fa-times"></i></button>
             <h3 className="text-2xl font-bold">Start Free Trial</h3>
             <form onSubmit={handleTrialSubmit} className="mt-4 space-y-4">
               <input type="text" name="Full Name" placeholder="Full Name" required className="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 text-white focus:ring-2 focus:ring-blue-500" />
               <input type="email" name="Email Address" placeholder="Email Address" required className="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 text-white focus:ring-2 focus:ring-blue-500" />
               <input type="text" name="Organization" placeholder="Organization" required className="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 text-white focus:ring-2 focus:ring-blue-500" />
               <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={closeTrial} className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition">Cancel</button>
-                <button type="submit" className="submit-btn px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition">Start Trial</button>
+                <button type="button" onClick={closeTrial} className="px-5 py-3 min-h-11 bg-gray-700 rounded-lg font-medium hover:bg-gray-600 transition active:scale-[0.98]">Cancel</button>
+                <button type="submit" className="submit-btn px-5 py-3 min-h-11 bg-green-600 rounded-lg font-semibold text-white shadow-md hover:bg-green-700 transition active:scale-[0.98]">Start Trial</button>
               </div>
             </form>
           </div>
@@ -1006,7 +1007,7 @@ export default function Landing() {
       {authOpen && (
         <div className="modal-overlay active fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={closeAuth}>
           <div className="modal-panel relative w-full max-w-md rounded-[1.75rem] border border-gray-700 bg-[#111827] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <button onClick={closeAuth} className="close-modal absolute right-4 top-4 text-gray-400 hover:text-gray-200"><i className="fas fa-times"></i></button>
+            <button onClick={closeAuth} aria-label="Close dialog" className="close-modal absolute right-3 top-3 rounded-lg p-2 text-gray-400 transition hover:bg-gray-700 hover:text-white active:scale-95"><i className="fas fa-times"></i></button>
             <h3 className="text-2xl font-bold text-white">
               {authMode === 'login' ? 'Log In' : 'Sign Up'}
             </h3>

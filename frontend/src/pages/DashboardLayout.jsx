@@ -28,16 +28,16 @@ export default function DashboardLayout() {
             <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">PhishGuard AI</Link>
           </div>
           <nav className="flex-1 px-4 py-6 space-y-2">
-            <Link to="/scanner" className="nav-item flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800">
+            <Link to="/scanner" className="nav-item flex items-center px-4 py-3 min-h-11 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition active:scale-[0.99]">
               <i className="fas fa-search mr-3"></i> Scan Email
             </Link>
-            <Link to="/scanner/history" className="nav-item flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800">
+            <Link to="/scanner/history" className="nav-item flex items-center px-4 py-3 min-h-11 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition active:scale-[0.99]">
               <i className="fas fa-history mr-3"></i> History
             </Link>
-            <Link to="/scanner/batch" className="nav-item flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800">
+            <Link to="/scanner/batch" className="nav-item flex items-center px-4 py-3 min-h-11 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition active:scale-[0.99]">
               <i className="fas fa-layer-group mr-3"></i> Batch Scan
             </Link>
-            <Link to="/scanner/settings" className="nav-item flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800">
+            <Link to="/scanner/settings" className="nav-item flex items-center px-4 py-3 min-h-11 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition active:scale-[0.99]">
               <i className="fas fa-cog mr-3"></i> Settings
             </Link>
           </nav>
@@ -49,14 +49,23 @@ export default function DashboardLayout() {
                 <p className="text-xs text-gray-400">{userEmail}</p>
               </div>
             </div>
-            <button onClick={logout} className="mt-4 w-full px-4 py-2 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white">Logout</button>
+            <button
+              onClick={logout}
+              className="mt-4 w-full px-4 py-3 min-h-11 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-md transition active:scale-[0.98]"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>
       {/* Main content */}
       <div className="md:ml-64">
         <header className="bg-[#111827] border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden text-gray-400 hover:text-white">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle navigation menu"
+            className="md:hidden rounded-lg p-2.5 text-gray-400 transition hover:bg-gray-800 hover:text-white active:scale-95"
+          >
             <i className="fas fa-bars"></i>
           </button>
           <h1 className="text-2xl font-bold">Security Operations Center</h1>

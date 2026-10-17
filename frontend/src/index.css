@@ -5,3 +5,34 @@ body {
   color: #e2e8f0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
+
+/* --------------------------------------------------------------------------
+   Tap affordance: applies to every control (buttons, role="button", submit)
+   without touching layout, so switches and chips keep their compact size.
+   -------------------------------------------------------------------------- */
+button,
+[role="button"],
+input[type="submit"],
+a[href],
+select {
+  cursor: pointer;
+  /* Kills the ~300ms double-tap zoom delay so taps register instantly */
+  touch-action: manipulation;
+  /* Visible flash confirms the press on touch screens */
+  -webkit-tap-highlight-color: rgba(96, 165, 250, 0.4);
+}
+
+/* Keyboard focus must always be clearly visible */
+button:focus-visible,
+[role="button"]:focus-visible,
+input[type="submit"]:focus-visible,
+a:focus-visible,
+select:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* Buttons read as disabled instead of clickable when disabled */
+button:disabled {
+  cursor: not-allowed;
+}

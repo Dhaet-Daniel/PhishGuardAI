@@ -77,7 +77,7 @@ export default function Settings() {
             />
             <button
               onClick={saveApiUrl}
-              className="bg-teal-600 hover:bg-teal-700 px-6 py-2 rounded-lg text-white font-medium transition"
+              className="bg-teal-600 hover:bg-teal-700 px-6 py-3 min-h-11 rounded-lg text-white font-medium shadow-md transition active:scale-[0.98]"
             >
               Save
             </button>
@@ -99,7 +99,7 @@ export default function Settings() {
                   {!isAdmin && !features[feat.key] && !requestedFeatures[feat.key] && (
                     <button
                       onClick={() => handleRequestFeature(feat.key)}
-                      className="text-xs text-blue-400 hover:text-blue-300 underline mt-1"
+                      className="inline-block mt-1 rounded px-1 py-1.5 text-sm font-medium text-blue-400 underline transition hover:bg-blue-500/10 hover:text-blue-300"
                     >
                       Request Admin to Enable
                     </button>

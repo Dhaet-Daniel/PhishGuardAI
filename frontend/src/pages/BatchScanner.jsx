@@ -231,7 +231,7 @@ export default function BatchScanner() {
           <button
             type="button"
             onClick={addEmail}
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600"
+            className="rounded-lg bg-slate-700 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-slate-600 active:scale-[0.98]"
           >
             Add Email
           </button>
@@ -254,7 +254,7 @@ export default function BatchScanner() {
                   type="button"
                   onClick={() => removeEmail(index)}
                   disabled={emails.length === 1}
-                  className="rounded-lg bg-red-600/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg bg-red-600/80 px-4 py-3 min-h-11 text-sm font-medium text-white transition hover:bg-red-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Remove
                 </button>
@@ -484,7 +484,7 @@ export default function BatchScanner() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50"
           >
             {loading ? 'Analyzing Batch...' : 'Run Batch Scan'}
           </button>
