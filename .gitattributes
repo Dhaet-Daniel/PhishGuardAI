@@ -1,0 +1,31 @@
+# Normalize text files to LF in the repository, regardless of the OS that
+# checks them out. This keeps the working tree clean on Windows and keeps
+# CI (Linux) deterministic.
+* text=auto eol=lf
+
+# Explicitly text
+*.py   text
+*.js   text
+*.jsx  text
+*.json text
+*.md   text
+*.yml  text
+*.yaml text
+*.css  text
+*.html text
+*.svg  text
+*.txt  text
+
+# Binary (never touch)
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.db    binary
+*.onnx  binary
+*.pt    binary
