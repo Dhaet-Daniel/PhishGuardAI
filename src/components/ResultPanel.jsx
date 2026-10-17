@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import ScoreGauge from './ScoreGauge';
+﻿import ScoreGauge from './ScoreGauge';
 
 // Human-readable labels for each analysis component
 const componentLabels = {
@@ -22,7 +21,7 @@ export default function ResultPanel({ result }) {
 
   // Collect components that have a non-zero score
   const activeComponents = Object.entries(result.analysis_breakdown || {})
-    .filter(([key, value]) => value > 0)
+    .filter(([, value]) => value > 0)
     .sort((a, b) => b[1] - a[1]); // most significant first
 
   // Show only top 5 to avoid clutter; add a "show all" toggle if needed

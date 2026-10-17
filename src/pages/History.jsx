@@ -18,18 +18,24 @@ export default function History() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState(null);
 
-  const fetchRecent = () => {
-    setLoading(true);
+  useEffect(() => {
+    let cancelled = false;
     getApi('/results/recent?limit=20')
       .then((data) => {
+        if (cancelled) return;
         const list = Array.isArray(data) ? data : data.results;
         setResults(list);
+        setLoading(false);
       })
-      .catch((err) => toast.error(err.message))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchRecent(); }, []);
+      .catch((err) => {
+        if (cancelled) return;
+        toast.error(err.message);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleViewDetail = (id) => {
     if (id === selectedId) return;

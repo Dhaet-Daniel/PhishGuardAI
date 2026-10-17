@@ -272,13 +272,17 @@ export const batchScanEmails = async (emailsArray) => {
 };
 
 export const getRecentResults = async (limit = 20) => {
-  const response = await fetch(`${BASE_URL}/api/v1/results/recent?limit=${limit}`);
+  const response = await fetch(`${BASE_URL}/api/v1/results/recent?limit=${limit}`, {
+    headers: authHeaders(),
+  });
   const data = await handleResponse(response);
   return normalizeHistoryResponse(data);
 };
 
 export const getResultById = async (id) => {
-  const response = await fetch(`${BASE_URL}/api/v1/results/${id}`);
+  const response = await fetch(`${BASE_URL}/api/v1/results/${id}`, {
+    headers: authHeaders(),
+  });
   const data = await handleResponse(response);
   return normalizeAnalysisResult(data);
 };
