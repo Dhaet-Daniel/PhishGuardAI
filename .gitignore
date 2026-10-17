@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node / Vite
+node_modules/
+dist/
+
+# Secrets & local config
+.env
+.secret_key
+
+# Databases (local runtime data)
+*.db
+*.db-wal
+*.db-shm
+
+# Test/tooling caches
+.pytest_cache/
+.pytest_tmp/
+pytest-cache-files-*
+.ruff_cache/
+tests/.artifacts/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
