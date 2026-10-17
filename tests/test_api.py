@@ -15,7 +15,14 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from backend.main import app
 from backend.auth import pwd_context
-from backend.models import Base, FeatureRequest, User, UserRole, engine as app_engine, get_db
+from backend.models import (
+    Base,
+    FeatureRequest,
+    User,
+    UserRole,
+    engine as app_engine,
+    get_db,
+)
 
 
 class APITestCase(unittest.TestCase):
@@ -27,7 +34,9 @@ class APITestCase(unittest.TestCase):
             f"sqlite:///{self.db_path}",
             connect_args={"check_same_thread": False},
         )
-        self.TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        self.TestingSessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=self.engine
+        )
         Base.metadata.create_all(bind=self.engine)
 
         def override_get_db():
@@ -101,17 +110,34 @@ class APITestCase(unittest.TestCase):
                 "Reply-To": "no-reply@kaggle.com",
                 "Return-Path": "<bounce@kaggle.com>",
             },
-            "links": [{"text": "Learn more", "url": "https://www.kaggle.com/", "source": "html"}],
+            "links": [
+                {
+                    "text": "Learn more",
+                    "url": "https://www.kaggle.com/",
+                    "source": "html",
+                }
+            ],
             "attachments": [],
         }
 
-        response = self.client.post("/api/v1/predict", json=payload, headers=self.auth_headers)
+        response = self.client.post(
+            "/api/v1/predict", json=payload, headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertIsNotNone(body["record_id"])
         self.assertEqual(body["prediction"], "Safe")
-        self.assertIn(body["category"], {"legitimate_marketing", "general_safe", "transactional", "security_notice", "suspicious"})
+        self.assertIn(
+            body["category"],
+            {
+                "legitimate_marketing",
+                "general_safe",
+                "transactional",
+                "security_notice",
+                "suspicious",
+            },
+        )
         self.assertIn("risk_signals", body)
         self.assertIn("trust_signals", body)
         self.assertIn("analysis_breakdown", body)
@@ -125,7 +151,9 @@ class APITestCase(unittest.TestCase):
             "attachments": [],
         }
 
-        response = self.client.post("/api/v1/predict", json=payload, headers=self.auth_headers)
+        response = self.client.post(
+            "/api/v1/predict", json=payload, headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 422)
 
@@ -168,7 +196,9 @@ class APITestCase(unittest.TestCase):
             },
         ]
 
-        response = self.client.post("/api/v1/batch-predict", json=payload, headers=self.auth_headers)
+        response = self.client.post(
+            "/api/v1/batch-predict", json=payload, headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 200)
         results = response.json()
@@ -191,7 +221,9 @@ class APITestCase(unittest.TestCase):
             "attachments": [],
         }
 
-        response = self.client.post("/api/v1/batch-predict", json=[email] * 11, headers=self.auth_headers)
+        response = self.client.post(
+            "/api/v1/batch-predict", json=[email] * 11, headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], "Batch size limited to 10 emails")
@@ -218,12 +250,19 @@ class APITestCase(unittest.TestCase):
             }
         ]
 
-        response = self.client.post("/api/v1/batch-predict", json=payload, headers=self.auth_headers)
+        response = self.client.post(
+            "/api/v1/batch-predict", json=payload, headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 422)
         body = response.json()
         self.assertIsInstance(body["detail"], list)
-        self.assertTrue(any(error["loc"] == ["body", 0, "attachments", 0, "sha256"] for error in body["detail"]))
+        self.assertTrue(
+            any(
+                error["loc"] == ["body", 0, "attachments", 0, "sha256"]
+                for error in body["detail"]
+            )
+        )
 
     def test_feedback_endpoint_accepts_linked_feedback(self):
         prediction_payload = {
@@ -243,7 +282,9 @@ class APITestCase(unittest.TestCase):
             "attachments": [],
         }
 
-        predict_response = self.client.post("/api/v1/predict", json=prediction_payload, headers=self.auth_headers)
+        predict_response = self.client.post(
+            "/api/v1/predict", json=prediction_payload, headers=self.auth_headers
+        )
         record_id = predict_response.json()["record_id"]
 
         feedback_payload = {
@@ -254,12 +295,28 @@ class APITestCase(unittest.TestCase):
             "reason": "Trusted domain and aligned headers.",
         }
 
-        response = self.client.post("/api/v1/feedback", json=feedback_payload)
+        response = self.client.post(
+            "/api/v1/feedback", json=feedback_payload, headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["message"], "Feedback submitted successfully")
         self.assertIsNotNone(body["feedback_id"])
+
+    def test_feedback_endpoint_requires_authentication(self):
+        response = self.client.post(
+            "/api/v1/feedback",
+            json={
+                "detection_result_id": 1,
+                "actual_prediction": "Safe",
+                "user_feedback": "Anonymous feedback should be rejected.",
+                "matched_keywords": [],
+                "reason": "No token supplied.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 401)
 
     def test_feedback_endpoint_requires_reference(self):
         response = self.client.post(
@@ -270,6 +327,7 @@ class APITestCase(unittest.TestCase):
                 "matched_keywords": [],
                 "reason": "Missing id should fail.",
             },
+            headers=self.auth_headers,
         )
 
         self.assertEqual(response.status_code, 400)
@@ -301,10 +359,16 @@ class APITestCase(unittest.TestCase):
             "attachments": [],
         }
 
-        self.client.post("/api/v1/predict", json=first_payload, headers=self.auth_headers)
-        self.client.post("/api/v1/predict", json=second_payload, headers=self.auth_headers)
+        self.client.post(
+            "/api/v1/predict", json=first_payload, headers=self.auth_headers
+        )
+        self.client.post(
+            "/api/v1/predict", json=second_payload, headers=self.auth_headers
+        )
 
-        response = self.client.get("/api/v1/results/recent?limit=2", headers=self.auth_headers)
+        response = self.client.get(
+            "/api/v1/results/recent?limit=2", headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -331,7 +395,9 @@ class APITestCase(unittest.TestCase):
             "attachments": [],
         }
 
-        predict_response = self.client.post("/api/v1/predict", json=prediction_payload, headers=self.auth_headers)
+        predict_response = self.client.post(
+            "/api/v1/predict", json=prediction_payload, headers=self.auth_headers
+        )
         record_id = predict_response.json()["record_id"]
 
         feedback_payload = {
@@ -341,9 +407,13 @@ class APITestCase(unittest.TestCase):
             "matched_keywords": ["brand_match", "newsletter_footer"],
             "reason": "Trusted domain and aligned headers.",
         }
-        self.client.post("/api/v1/feedback", json=feedback_payload)
+        self.client.post(
+            "/api/v1/feedback", json=feedback_payload, headers=self.auth_headers
+        )
 
-        response = self.client.get(f"/api/v1/results/{record_id}", headers=self.auth_headers)
+        response = self.client.get(
+            f"/api/v1/results/{record_id}", headers=self.auth_headers
+        )
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -375,10 +445,14 @@ class APITestCase(unittest.TestCase):
 
         db = self.TestingSessionLocal()
         try:
-            feature_request = db.query(FeatureRequest).filter(
-                FeatureRequest.user_email == self.user_email,
-                FeatureRequest.feature_name == "ENABLE_TRANSFORMERS",
-            ).first()
+            feature_request = (
+                db.query(FeatureRequest)
+                .filter(
+                    FeatureRequest.user_email == self.user_email,
+                    FeatureRequest.feature_name == "ENABLE_TRANSFORMERS",
+                )
+                .first()
+            )
             self.assertIsNotNone(feature_request)
             self.assertEqual(feature_request.status, "pending")
         finally:

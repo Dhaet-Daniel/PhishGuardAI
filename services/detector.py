@@ -137,9 +137,9 @@ class DetectionResult(TypedDict):
     analysis_breakdown: dict[str, float]
 
 
-def _get_nlp(user_id: int | None = None, db=None):
+def _get_nlp(enabled: bool):
     global nlp, _nlp_load_attempted
-    if not get_effective_flag("ENABLE_SPACY", user_id, db):
+    if not enabled:
         return None
     if nlp is not None:
         return nlp
@@ -151,14 +151,16 @@ def _get_nlp(user_id: int | None = None, db=None):
 
         nlp = spacy.load("en_core_web_sm")
     except Exception as exc:  # pragma: no cover
-        logger.warning("spaCy is unavailable; continuing without lemmatization: %s", exc)
+        logger.warning(
+            "spaCy is unavailable; continuing without lemmatization: %s", exc
+        )
         nlp = None
     return nlp
 
 
-def _get_classifier(user_id: int | None = None, db=None):
+def _get_classifier(enabled: bool):
     global classifier, _classifier_load_attempted
-    if not get_effective_flag("ENABLE_TRANSFORMERS", user_id, db):
+    if not enabled:
         return None
     if classifier is not None:
         return classifier
@@ -168,9 +170,14 @@ def _get_classifier(user_id: int | None = None, db=None):
     try:
         from transformers import pipeline
 
-        classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+        classifier = pipeline(
+            "zero-shot-classification", model="facebook/bart-large-mnli"
+        )
     except Exception as exc:  # pragma: no cover
-        logger.warning("Transformers pipeline is unavailable; continuing without ML scoring: %s", exc)
+        logger.warning(
+            "Transformers pipeline is unavailable; continuing without ML scoring: %s",
+            exc,
+        )
         classifier = None
     return classifier
 
@@ -179,11 +186,13 @@ def _normalize_text(*parts: str) -> str:
     return " ".join(part.strip() for part in parts if part).lower()
 
 
-def _preprocess_text(text: str, user_id: int | None = None, db=None) -> str:
-    current_nlp = _get_nlp(user_id, db)
+def _preprocess_text(text: str, enable_spacy: bool = False) -> str:
+    current_nlp = _get_nlp(enable_spacy)
     if current_nlp:
         doc = current_nlp(text.lower())
-        return " ".join(token.lemma_ for token in doc if not token.is_stop and token.is_alpha)
+        return " ".join(
+            token.lemma_ for token in doc if not token.is_stop and token.is_alpha
+        )
     return text.lower()
 
 
@@ -265,8 +274,8 @@ def _cached_domain_age_score(url: str) -> float:
         return 0.0
 
 
-def _domain_age_score(url: str, user_id: int | None = None, db=None) -> float:
-    if not get_effective_flag("ENABLE_WHOIS", user_id, db):
+def _domain_age_score(url: str, enable_whois: bool = False) -> float:
+    if not enable_whois:
         return 0.0
     return _cached_domain_age_score(url)
 
@@ -303,8 +312,7 @@ def _url_analysis(
     body: str,
     explicit_links: list[dict[str, Any]] | None = None,
     body_html: str | None = None,
-    user_id: int | None = None,
-    db=None,
+    enable_whois: bool = False,
 ) -> tuple[float, list[str], list[str], list[str], list[str]]:
     urls = _extract_urls(body)
     html_links = _extract_html_links(body_html or body)
@@ -334,10 +342,7 @@ def _url_analysis(
         if _is_suspicious_url(url):
             suspicious_urls.append(url)
             score += 0.14
-        age_score = _domain_age_score(url, user_id, db)
-        if age_score > 0:
-            young_domains.append(url)
-            score += age_score
+        age_score = _domain_age_score(url, enable_whois)
         if age_score > 0:
             young_domains.append(url)
             score += age_score
@@ -350,17 +355,30 @@ def _url_analysis(
             score += 0.05
         if sender_base and base and sender_base != base:
             if base in KNOWN_BRAND_DOMAINS and sender_base not in KNOWN_BRAND_DOMAINS:
-                issues.append(f"Link domain {base} does not align with sender domain {sender_base}.")
+                issues.append(
+                    f"Link domain {base} does not align with sender domain {sender_base}."
+                )
                 score += 0.07
 
     for anchor_text, href in html_links:
         visible = anchor_text.lower().strip()
         href_host = urlparse(href).netloc.lower()
-        if visible.startswith("http") and href_host and _base_domain(urlparse(visible).netloc.lower()) != _base_domain(href_host):
+        if (
+            visible.startswith("http")
+            and href_host
+            and _base_domain(urlparse(visible).netloc.lower())
+            != _base_domain(href_host)
+        ):
             issues.append("HTML anchor text and actual destination do not match.")
             score += 0.1
 
-    if urls and not suspicious_urls and sender_base and linked_domains and linked_domains == {sender_base}:
+    if (
+        urls
+        and not suspicious_urls
+        and sender_base
+        and linked_domains
+        and linked_domains == {sender_base}
+    ):
         trust_signals.append("Visible links align with the sender's base domain.")
     elif urls and not suspicious_urls and linked_domains:
         trust_signals.append("Links do not match known suspicious patterns.")
@@ -368,12 +386,14 @@ def _url_analysis(
     return min(score, 0.45), suspicious_urls, young_domains, issues, trust_signals
 
 
-def _ml_phishing_score(text: str, user_id: int | None = None, db=None) -> float:
-    current_classifier = _get_classifier(user_id, db)
+def _ml_phishing_score(text: str, enable_transformers: bool = False) -> float:
+    current_classifier = _get_classifier(enable_transformers)
     if current_classifier is None:
         return 0.0
     try:
-        result = current_classifier(text, candidate_labels=["phishing", "safe", "newsletter"])
+        result = current_classifier(
+            text, candidate_labels=["phishing", "safe", "newsletter"]
+        )
         if "phishing" in result["labels"]:
             return result["scores"][result["labels"].index("phishing")]
     except Exception:
@@ -395,7 +415,9 @@ def _urgency_analysis(text: str) -> tuple[float, list[str]]:
         "reset now",
     ]
     matched = [phrase for phrase in urgent_patterns if phrase in text.lower()]
-    score = min(exclamation_count * 0.04 + caps_ratio * 0.12 + len(matched) * 0.05, 0.22)
+    score = min(
+        exclamation_count * 0.04 + caps_ratio * 0.12 + len(matched) * 0.05, 0.22
+    )
     notes: list[str] = []
     if matched:
         notes.append(f"Urgency language detected: {', '.join(matched)}.")
@@ -406,7 +428,9 @@ def _urgency_analysis(text: str) -> tuple[float, list[str]]:
     return score, notes
 
 
-def _brand_alignment_score(sender: str, body_text: str, headers: dict[str, str] | None) -> tuple[float, list[str], list[str]]:
+def _brand_alignment_score(
+    sender: str, body_text: str, headers: dict[str, str] | None
+) -> tuple[float, list[str], list[str]]:
     sender_base = _base_domain(_sender_domain(sender)) if _sender_domain(sender) else ""
     trust_signals: list[str] = []
     issues: list[str] = []
@@ -415,7 +439,9 @@ def _brand_alignment_score(sender: str, body_text: str, headers: dict[str, str] 
     reply_to = (headers or {}).get("Reply-To", "")
     return_path = (headers or {}).get("Return-Path", "").strip("<>")
     reply_base = _base_domain(_sender_domain(reply_to)) if "@" in reply_to else ""
-    return_base = _base_domain(_sender_domain(return_path)) if "@" in return_path else ""
+    return_base = (
+        _base_domain(_sender_domain(return_path)) if "@" in return_path else ""
+    )
 
     if reply_base and sender_base and reply_base != sender_base:
         issues.append("Reply-To domain does not align with the visible sender domain.")
@@ -424,7 +450,9 @@ def _brand_alignment_score(sender: str, body_text: str, headers: dict[str, str] 
         trust_signals.append("Reply-To aligns with the sender domain.")
 
     if return_base and sender_base and return_base != sender_base:
-        issues.append("Return-Path domain does not align with the visible sender domain.")
+        issues.append(
+            "Return-Path domain does not align with the visible sender domain."
+        )
         score += 0.08
     elif return_base and sender_base and return_base == sender_base:
         trust_signals.append("Return-Path aligns with the sender domain.")
@@ -435,13 +463,17 @@ def _brand_alignment_score(sender: str, body_text: str, headers: dict[str, str] 
     return score, issues, trust_signals
 
 
-def _header_analysis(sender: str, headers: dict[str, str] | None) -> tuple[float, list[str], list[str]]:
+def _header_analysis(
+    sender: str, headers: dict[str, str] | None
+) -> tuple[float, list[str], list[str]]:
     if not headers:
         return 0.0, [], []
 
     auth_text = headers.get("Authentication-Results", "").lower()
     received_text = headers.get("Received", "").lower()
-    sender_domain = _base_domain(_sender_domain(sender)) if _sender_domain(sender) else ""
+    sender_domain = (
+        _base_domain(_sender_domain(sender)) if _sender_domain(sender) else ""
+    )
     issues: list[str] = []
     trust_signals: list[str] = []
     score = 0.0
@@ -465,7 +497,9 @@ def _header_analysis(sender: str, headers: dict[str, str] | None) -> tuple[float
         score += 0.1
 
     if not auth_text:
-        issues.append("Authentication-Results header was not supplied, so sender validation is limited.")
+        issues.append(
+            "Authentication-Results header was not supplied, so sender validation is limited."
+        )
         score += 0.04
 
     if received_text:
@@ -496,7 +530,9 @@ def _transactional_trust_signals(text: str) -> list[str]:
     return signals
 
 
-def _attachment_analysis(attachments: list[dict[str, Any]] | None) -> tuple[float, list[str], list[str]]:
+def _attachment_analysis(
+    attachments: list[dict[str, Any]] | None,
+) -> tuple[float, list[str], list[str]]:
     if not attachments:
         return 0.0, [], []
 
@@ -514,23 +550,40 @@ def _attachment_analysis(attachments: list[dict[str, Any]] | None) -> tuple[floa
         if not filename:
             continue
         if any(filename.endswith(ext) for ext in risky_extensions):
-            risk_signals.append(f"Attachment filename uses a high-risk executable extension: {filename}.")
+            risk_signals.append(
+                f"Attachment filename uses a high-risk executable extension: {filename}."
+            )
             score += 0.2
         elif any(filename.endswith(ext) for ext in caution_extensions):
-            risk_signals.append(f"Attachment filename uses an extension that deserves extra caution: {filename}.")
+            risk_signals.append(
+                f"Attachment filename uses an extension that deserves extra caution: {filename}."
+            )
             score += 0.08
         elif filename.endswith((".pdf", ".png", ".jpg", ".jpeg")):
-            trust_signals.append(f"Attachment filename looks ordinary for document sharing: {filename}.")
+            trust_signals.append(
+                f"Attachment filename looks ordinary for document sharing: {filename}."
+            )
 
         if re.search(r"\.(pdf|doc|xls|jpg|png)\.(exe|scr|js|bat)$", filename):
-            risk_signals.append(f"Attachment filename appears to use a double-extension disguise: {filename}.")
+            risk_signals.append(
+                f"Attachment filename appears to use a double-extension disguise: {filename}."
+            )
             score += 0.12
 
-        if content_type and "octet-stream" not in content_type and filename.endswith(".pdf") and "pdf" in content_type:
-            trust_signals.append(f"Attachment content type is consistent with the filename for {filename}.")
+        if (
+            content_type
+            and "octet-stream" not in content_type
+            and filename.endswith(".pdf")
+            and "pdf" in content_type
+        ):
+            trust_signals.append(
+                f"Attachment content type is consistent with the filename for {filename}."
+            )
 
         if isinstance(size, int) and size > 15_000_000:
-            risk_signals.append(f"Attachment is unusually large for a typical notification email: {filename}.")
+            risk_signals.append(
+                f"Attachment is unusually large for a typical notification email: {filename}."
+            )
             score += 0.03
 
     return min(score, 0.3), risk_signals, trust_signals
@@ -589,7 +642,9 @@ def _build_trust_signals(
     trust_signals: list[str] = []
     sender_domain = _sender_domain(sender)
     if sender_domain and sender_domain not in FREE_EMAIL_DOMAINS:
-        trust_signals.append("The sender uses a branded domain rather than a free mailbox provider.")
+        trust_signals.append(
+            "The sender uses a branded domain rather than a free mailbox provider."
+        )
     if not keyword_matches:
         trust_signals.append("No high-risk phishing keywords were detected.")
     if not suspicious_urls:
@@ -625,13 +680,25 @@ def _build_risk_signals(
     if keyword_matches:
         signals.append(f"Risky keywords detected: {', '.join(keyword_matches)}.")
     if sender_matches:
-        signals.append("Sender naming pattern triggered risk heuristics: " + ", ".join(f"'{m}'" for m in sender_matches) + ".")
+        signals.append(
+            "Sender naming pattern triggered risk heuristics: "
+            + ", ".join(f"'{m}'" for m in sender_matches)
+            + "."
+        )
     if suspicious_urls:
-        signals.append("Suspicious link domains detected: " + ", ".join(suspicious_urls) + ".")
+        signals.append(
+            "Suspicious link domains detected: " + ", ".join(suspicious_urls) + "."
+        )
     if young_domains:
-        signals.append("One or more linked domains appear recently registered: " + ", ".join(young_domains) + ".")
+        signals.append(
+            "One or more linked domains appear recently registered: "
+            + ", ".join(young_domains)
+            + "."
+        )
     if ml_score >= 0.35:
-        signals.append(f"The ML classifier assigned elevated phishing probability ({ml_score:.2f}).")
+        signals.append(
+            f"The ML classifier assigned elevated phishing probability ({ml_score:.2f})."
+        )
     signals.extend(urgency_notes)
     signals.extend(header_issues)
     signals.extend(url_issues)
@@ -647,7 +714,9 @@ def _recommended_actions(category: str, score: float) -> list[str]:
             "Inspect the sender domain, Reply-To, and destination URLs before taking any action.",
         ]
         if score >= PHISHING_THRESHOLD:
-            actions.append("Escalate the message for human review if it targets credentials, payments, or account recovery.")
+            actions.append(
+                "Escalate the message for human review if it targets credentials, payments, or account recovery."
+            )
         return actions
     return [
         "You can review the message normally, but still verify destination domains before signing in.",
@@ -659,11 +728,18 @@ def _summary(prediction: str, risk_signals: list[str], trust_signals: list[str])
     if prediction == "Phishing":
         if risk_signals:
             detail = risk_signals[0].rstrip(".")
-            return "This email looks suspicious because " + detail[0].lower() + detail[1:] + "."
+            return (
+                "This email looks suspicious because "
+                + detail[0].lower()
+                + detail[1:]
+                + "."
+            )
         return "This email looks suspicious because multiple phishing heuristics were triggered."
     if trust_signals:
         detail = trust_signals[0].rstrip(".")
-        return "This email looks low risk because " + detail[0].lower() + detail[1:] + "."
+        return (
+            "This email looks low risk because " + detail[0].lower() + detail[1:] + "."
+        )
     return "This email looks low risk because it did not trigger major phishing indicators."
 
 
@@ -679,10 +755,14 @@ async def detect_phishing(
     user_id: int | None = None,
     db=None,
 ) -> DetectionResult:
+    enable_spacy = get_effective_flag("ENABLE_SPACY", user_id, db)
+    enable_transformers = get_effective_flag("ENABLE_TRANSFORMERS", user_id, db)
+    enable_whois = get_effective_flag("ENABLE_WHOIS", user_id, db)
+
     parsed_body = _parse_email_body(body_html or body)
     effective_text = body_text or parsed_body or body
     combined_text = _normalize_text(subject, sender, effective_text, parsed_body)
-    processed_text = _preprocess_text(combined_text, user_id, db)
+    processed_text = _preprocess_text(combined_text, enable_spacy)
     sender_lower = sender.strip().lower()
 
     (
@@ -694,14 +774,20 @@ async def detect_phishing(
     ) = await asyncio.gather(
         asyncio.to_thread(_keyword_analysis, processed_text),
         asyncio.to_thread(_sender_analysis, sender_lower),
-        asyncio.to_thread(_url_analysis, sender, body, links, body_html, user_id, db),
-        asyncio.to_thread(_ml_phishing_score, processed_text, user_id, db),
+        asyncio.to_thread(_url_analysis, sender, body, links, body_html, enable_whois),
+        asyncio.to_thread(_ml_phishing_score, processed_text, enable_transformers),
         asyncio.to_thread(_urgency_analysis, combined_text),
     )
 
-    header_score, header_issues, header_trust_signals = _header_analysis(sender, headers)
-    attachment_score, attachment_issues, attachment_trust = _attachment_analysis(attachments)
-    alignment_score, alignment_issues, alignment_trust = _brand_alignment_score(sender, parsed_body, headers)
+    header_score, header_issues, header_trust_signals = _header_analysis(
+        sender, headers
+    )
+    attachment_score, attachment_issues, attachment_trust = _attachment_analysis(
+        attachments
+    )
+    alignment_score, alignment_issues, alignment_trust = _brand_alignment_score(
+        sender, parsed_body, headers
+    )
     marketing_signals = _marketing_trust_signals(parsed_body)
     transactional_signals = _transactional_trust_signals(parsed_body)
 
@@ -730,12 +816,12 @@ async def detect_phishing(
         attachment_trust,
     )
     trust_credit = min(
-        0.12 if header_trust_signals else 0.0
-        + 0.07 if marketing_signals else 0.0
-        + 0.05 if transactional_signals else 0.0
-        + 0.05 if link_alignment_signals else 0.0
-        + 0.04 if alignment_trust else 0.0
-        + 0.02 if attachment_trust else 0.0,
+        (0.12 if header_trust_signals else 0.0)
+        + (0.07 if marketing_signals else 0.0)
+        + (0.05 if transactional_signals else 0.0)
+        + (0.05 if link_alignment_signals else 0.0)
+        + (0.04 if alignment_trust else 0.0)
+        + (0.02 if attachment_trust else 0.0),
         0.24,
     )
     adjusted_score = max(raw_score - trust_credit, 0.0)
@@ -771,14 +857,28 @@ async def detect_phishing(
         matched_keywords.append("sender_alignment_issue")
 
     prediction = "Phishing" if adjusted_score >= PHISHING_THRESHOLD else "Safe"
-    category = _classify_category(prediction, subject, parsed_body, adjusted_score, trust_signals, risk_signals, header_issues)
-    if prediction == "Safe" and category == "suspicious" and adjusted_score >= SUSPICIOUS_THRESHOLD:
+    category = _classify_category(
+        prediction,
+        subject,
+        parsed_body,
+        adjusted_score,
+        trust_signals,
+        risk_signals,
+        header_issues,
+    )
+    if (
+        prediction == "Safe"
+        and category == "suspicious"
+        and adjusted_score >= SUSPICIOUS_THRESHOLD
+    ):
         category = "suspicious"
 
     confidence = adjusted_score if prediction == "Phishing" else 1.0 - adjusted_score
     risk_level = _classify_risk_level(adjusted_score)
     reason = (
-        "Matched risky indicators: " + ", ".join(matched_keywords or ["multiple phishing heuristics"]) + "."
+        "Matched risky indicators: "
+        + ", ".join(matched_keywords or ["multiple phishing heuristics"])
+        + "."
         if prediction == "Phishing"
         else (
             "Low-risk indicators detected, but legitimacy signals outweighed them."

@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
@@ -73,12 +74,25 @@ app = FastAPI(
     ],
 )
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+
+def _load_cors_origins() -> list[str]:
+    raw = os.getenv("PHISHGUARD_CORS_ORIGINS", "").strip()
+    if not raw:
+        return DEFAULT_CORS_ORIGINS
+    origins = [
+        origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()
+    ]
+    return origins or DEFAULT_CORS_ORIGINS
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=_load_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

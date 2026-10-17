@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -13,19 +14,40 @@ DEFAULT_FLAGS = {
     "ENABLE_WHOIS": False,
 }
 
+_ENV_PREFIX = "PHISHGUARD_"
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+_FALSE_VALUES = {"0", "false", "no", "off"}
+
+
+def _env_override(name: str) -> bool | None:
+    """Read an env override for a flag, e.g. PHISHGUARD_ENABLE_SPACY=false."""
+    raw = os.getenv(f"{_ENV_PREFIX}{name}")
+    if raw is None:
+        return None
+    value = raw.strip().lower()
+    if value in _TRUE_VALUES:
+        return True
+    if value in _FALSE_VALUES:
+        return False
+    return None
+
 
 def load_flags() -> dict[str, bool]:
     """Return current feature flags. If the file is missing, create it with defaults."""
     if not FLAGS_FILE.exists():
         save_flags(DEFAULT_FLAGS)
-        return DEFAULT_FLAGS.copy()
-
-    with FLAGS_FILE.open("r", encoding="utf-8") as handle:
-        loaded = json.load(handle)
+        loaded = DEFAULT_FLAGS.copy()
+    else:
+        with FLAGS_FILE.open("r", encoding="utf-8") as handle:
+            loaded = json.load(handle)
 
     flags = DEFAULT_FLAGS.copy()
     for key, default_value in DEFAULT_FLAGS.items():
         flags[key] = bool(loaded.get(key, default_value))
+    for key in DEFAULT_FLAGS:
+        override = _env_override(key)
+        if override is not None:
+            flags[key] = override
     return flags
 
 
@@ -50,7 +72,9 @@ def set_flag(name: str, value: bool) -> None:
     save_flags(flags)
 
 
-def get_effective_flag(feature_name: str, user_id: int | None = None, db: Session | None = None) -> bool:
+def get_effective_flag(
+    feature_name: str, user_id: int | None = None, db: Session | None = None
+) -> bool:
     """
     Return the effective feature flag for a given user.
     1. Check UserFeature table for a per-user override.
@@ -62,10 +86,13 @@ def get_effective_flag(feature_name: str, user_id: int | None = None, db: Sessio
         except ModuleNotFoundError:
             from backend.models import UserFeature
 
-        override = db.query(UserFeature).filter(
-            UserFeature.user_id == user_id,
-            UserFeature.feature_name == feature_name
-        ).first()
+        override = (
+            db.query(UserFeature)
+            .filter(
+                UserFeature.user_id == user_id, UserFeature.feature_name == feature_name
+            )
+            .first()
+        )
         if override is not None:
             return bool(override.enabled)
     return get_flag(feature_name)

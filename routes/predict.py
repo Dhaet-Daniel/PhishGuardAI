@@ -73,8 +73,10 @@ def _extract_raw_email_parts(raw_email: str) -> dict:
     return {
         "subject": message.get("Subject"),
         "sender": sender_email or None,
-        "body_text": "\n".join(part.strip() for part in text_parts if part).strip() or None,
-        "body_html": "\n".join(part.strip() for part in html_parts if part).strip() or None,
+        "body_text": "\n".join(part.strip() for part in text_parts if part).strip()
+        or None,
+        "body_html": "\n".join(part.strip() for part in html_parts if part).strip()
+        or None,
         "headers": headers,
     }
 
@@ -100,7 +102,9 @@ def _normalize_request(email: EmailRequest) -> dict:
     subject = email.subject or raw_parts.get("subject")
 
     explicit_links = [link.model_dump() for link in (email.links or [])]
-    attachment_metadata = [attachment.model_dump() for attachment in (email.attachments or [])]
+    attachment_metadata = [
+        attachment.model_dump() for attachment in (email.attachments or [])
+    ]
 
     return {
         "subject": subject,
@@ -133,7 +137,9 @@ def _build_db_result(email: EmailRequest, result: dict) -> DBResult:
         recommended_actions=dumps_json(result["recommended_actions"]),
         analysis_breakdown=dumps_json(result["analysis_breakdown"]),
         headers=dumps_json(email.headers or {}),
-        attachment_metadata=dumps_json([attachment.model_dump() for attachment in (email.attachments or [])]),
+        attachment_metadata=dumps_json(
+            [attachment.model_dump() for attachment in (email.attachments or [])]
+        ),
     )
 
 
@@ -205,6 +211,7 @@ def _build_stored_result_detail(record: DBResult) -> StoredEmailResultDetail:
         feedback=[_build_feedback_item(item) for item in feedback_items],
     )
 
+
 PREDICT_REQUEST_EXAMPLES = {
     "safe_newsletter": {
         "summary": "Legitimate newsletter-style email",
@@ -243,7 +250,11 @@ PREDICT_REQUEST_EXAMPLES = {
                 "Return-Path": "<mailer@credential-check.xyz>",
             },
             "attachments": [
-                {"filename": "Payroll_Update.scr", "content_type": "application/octet-stream", "size": 34816}
+                {
+                    "filename": "Payroll_Update.scr",
+                    "content_type": "application/octet-stream",
+                    "size": 34816,
+                }
             ],
         },
     },
@@ -316,7 +327,11 @@ PREDICT_RESPONSE_EXAMPLES = {
     },
     500: {
         "description": "Unexpected server error",
-        "content": {"application/json": {"example": {"detail": "An unexpected server error occurred."}}},
+        "content": {
+            "application/json": {
+                "example": {"detail": "An unexpected server error occurred."}
+            }
+        },
     },
 }
 
@@ -326,6 +341,27 @@ def _get_current_user_record(db: Session, current_user: dict) -> User:
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+async def _run_detection(normalized: dict, user_id: int, db: Session):
+    """Run the detector using the request's DB session.
+
+    The detector resolves per-user feature flags with this session before it
+    dispatches any work to worker threads, so the session is only ever touched
+    on the event-loop thread (never concurrently).
+    """
+    return await detect_phishing(
+        normalized["subject"],
+        normalized["sender"],
+        normalized["combined_body"],
+        normalized["headers"],
+        normalized["attachments"],
+        normalized["links"],
+        normalized["body_text"],
+        normalized["body_html"],
+        user_id,
+        db,
+    )
 
 
 @router.get(
@@ -398,18 +434,7 @@ async def predict_email(
     try:
         user = _get_current_user_record(db, current_user)
         normalized = _normalize_request(email)
-        result = await detect_phishing(
-            normalized["subject"],
-            normalized["sender"],
-            normalized["combined_body"],
-            normalized["headers"],
-            normalized["attachments"],
-            normalized["links"],
-            normalized["body_text"],
-            normalized["body_html"],
-            user.id,
-            db,
-        )
+        result = await _run_detection(normalized, user.id, db)
 
         db_email = email.model_copy(
             update={
@@ -430,7 +455,9 @@ async def predict_email(
         raise
     except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail="An unexpected server error occurred.")
+        raise HTTPException(
+            status_code=500, detail="An unexpected server error occurred."
+        )
 
 
 @router.post(
@@ -459,7 +486,7 @@ async def predict_email(
                             {
                                 "loc": ["body", 0, "attachments", 0, "sha256"],
                                 "msg": "String should have at least 32 characters",
-                                "type": "string_too_short"
+                                "type": "string_too_short",
                             }
                         ]
                     }
@@ -476,7 +503,10 @@ async def batch_predict_emails(
     current_user: dict = Depends(get_current_user),
 ):
     if not isinstance(emails, list):
-        raise HTTPException(status_code=422, detail="Request body must be a JSON array of email objects.")
+        raise HTTPException(
+            status_code=422,
+            detail="Request body must be a JSON array of email objects.",
+        )
     if len(emails) > 10:
         raise HTTPException(status_code=400, detail="Batch size limited to 10 emails")
 
@@ -497,18 +527,7 @@ async def batch_predict_emails(
         normalized_emails = [_normalize_request(email) for email in validated_emails]
         results = await asyncio.gather(
             *[
-                detect_phishing(
-                    normalized["subject"],
-                    normalized["sender"],
-                    normalized["combined_body"],
-                    normalized["headers"],
-                    normalized["attachments"],
-                    normalized["links"],
-                    normalized["body_text"],
-                    normalized["body_html"],
-                    user.id,
-                    db,
-                )
+                _run_detection(normalized, user.id, db)
                 for normalized in normalized_emails
             ]
         )
@@ -542,7 +561,9 @@ async def batch_predict_emails(
         raise
     except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail="An unexpected server error occurred.")
+        raise HTTPException(
+            status_code=500, detail="An unexpected server error occurred."
+        )
 
 
 @router.post(
@@ -555,6 +576,7 @@ async def submit_feedback(
     request: Request,
     feedback: FeedbackRequest,
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     try:
         if feedback.detection_result_id is None and not feedback.email_id:
@@ -574,9 +596,14 @@ async def submit_feedback(
         db.add(db_feedback)
         db.commit()
         db.refresh(db_feedback)
-        return {"message": "Feedback submitted successfully", "feedback_id": db_feedback.id}
+        return {
+            "message": "Feedback submitted successfully",
+            "feedback_id": db_feedback.id,
+        }
     except HTTPException:
         raise
     except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail="An unexpected server error occurred.")
+        raise HTTPException(
+            status_code=500, detail="An unexpected server error occurred."
+        )
