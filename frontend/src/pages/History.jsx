@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getApi } from '../services/api';
 import ResultPanel from '../components/ResultPanel';
+import VerdictBadge from '../components/VerdictBadge';
 import toast from 'react-hot-toast';
 
 // Safe date formatter – returns "—" if the value is missing or invalid
@@ -90,11 +91,7 @@ export default function History() {
                   <td className="p-3">{item.sender}</td>
                   <td className="p-3">{item.score?.toFixed(2)}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      item.prediction === 'Phishing' ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'
-                    }`}>
-                      {item.prediction}
-                    </span>
+                    <VerdictBadge prediction={item.prediction} score={item.score} />
                   </td>
                   <td className="p-3 text-gray-400">{formatDate(item.timestamp)}</td>
                 </tr>

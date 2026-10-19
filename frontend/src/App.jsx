@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import Landing from './pages/Landing';
 import Pricing from './pages/Pricing';
 import DashboardLayout from './pages/DashboardLayout';
+import Dashboard from './pages/Dashboard';
 import Scanner from './pages/Scanner';
 import Settings from './pages/Settings';
 import BatchScanner from './pages/BatchScanner';
@@ -36,7 +37,8 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Scanner />} />
+            <Route index element={<Dashboard />} />
+            <Route path="scan" element={<Scanner />} />
             <Route path="batch" element={<BatchScanner />} />
             <Route path="history" element={<History />} />
             <Route path="settings" element={<Settings />} />
